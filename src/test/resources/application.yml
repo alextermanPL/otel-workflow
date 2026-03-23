@@ -1,0 +1,12 @@
+quarkus:
+  log:
+    level: INFO
+    category:
+      com.luminor.workflow.testworkflow:
+        level: DEBUG
+    console:
+      json: false
+      format: '%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n'
+  rest-client:
+    payment-api:
+      url: http://localhost:${quarkus.wiremock.devservices.port:8089}

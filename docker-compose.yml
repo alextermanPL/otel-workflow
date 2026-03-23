@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: temporal-postgres
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5433:5432"
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:1.27.2
+    container_name: temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres
+    ports:
+      - "7233:7233"
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "workflow", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal-ui:
+    image: temporalio/ui:2.37.3
+    container_name: temporal-ui
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8080:8080"
+
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.27.1
+    container_name: temporal-admin-tools
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    stdin_open: true
+    tty: true
+
+  wiremock:
+    image: wiremock/wiremock:3.10.0
+    container_name: wiremock
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    command: --verbose
+
+  # ── Observability stack ─────────────────────────────────────────────────────
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "14268:14268"   # Jaeger HTTP collector (legacy, kept for compatibility)
+    # Port 4317 (OTLP gRPC) is internal only — otel-collector reaches it on the Docker network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.148.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC — app sends traces here
+      - "4318:4318"   # OTLP HTTP — optional
+      - "8889:8889"   # Prometheus metrics scrape endpoint
+    depends_on:
+      - jaeger
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9091:9090"   # Prometheus UI (9091 on host to avoid clash with app on 9090)
+    depends_on:
+      - otel-collector
+
+volumes:
+  temporal-postgres-data:
+  prometheus-data:

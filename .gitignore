@@ -1,0 +1,57 @@
+.kotlin/
+
+# Gradle
+.gradle/
+build/
+.gradle_home/
+# Lock files
+*.lockfile
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# IntelliJ
+.idea
+*.ipr
+*.iml
+*.iws
+
+# NetBeans
+nb-configuration.xml
+
+# Visual Studio Code
+.vscode
+.factorypath
+
+# OSX
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+
+# patch
+*.orig
+*.rej
+
+# Local environment
+.env
+/gradle/.kotlin/
+/libs/*/.kotlin/
+/connectors/*/.kotlin/
+/services/*/.kotlin/
+
+# CI artifacts
+**/spotless_check_failed
+**/spotless_apply_succeeded
+**/zap-passive-report.html
+**/zap-passive-report.json
+
+# Filesystem-specific
+lost+found/
+
+#Report
+report.csv

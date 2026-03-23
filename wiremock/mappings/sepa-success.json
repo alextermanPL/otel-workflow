@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/payment/sepa/.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "continue"
+    }
+  }
+}

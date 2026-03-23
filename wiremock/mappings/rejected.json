@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/api/payment/rejected/.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "rejected": true
+    }
+  }
+}

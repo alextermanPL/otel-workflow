@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/payment/completed"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "continue"
+    }
+  }
+}
