@@ -108,6 +108,22 @@ services:
     depends_on:
       - otel-collector
 
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"   # Grafana UI → http://localhost:3000
+    depends_on:
+      - prometheus
+
 volumes:
   temporal-postgres-data:
   prometheus-data:
+  grafana-data:
