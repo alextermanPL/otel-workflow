@@ -245,3 +245,104 @@ histogram_quantile(0.99, rate(temporal_activity_schedule_to_start_latency_second
 # Workflow p99 end-to-end latency
 histogram_quantile(0.99, rate(temporal_workflow_endtoend_latency_seconds_bucket[5m]))
 ```
+
+---
+
+## 7. Correlation ID Propagation
+
+### How it works
+
+Two CDI beans handle end-to-end propagation of `x-request-id` across all boundaries:
+
+| Class | Role |
+|---|---|
+| `CorrelationFilter` | JAX-RS filter — reads `x-request-id` from the HTTP request (generates a UUID if absent) and injects it into OTel Baggage |
+| `BaggageSpanProcessor` | OTel `SpanProcessor` — promotes baggage entries to span attributes on every new span |
+
+Once in OTel Baggage, propagation is **automatic**:
+
+| Boundary | How |
+|---|---|
+| Temporal workflow + activities | `quarkus-temporal` serialises the full OTel context (trace + baggage) into workflow headers |
+| Outbound REST clients | `@RestClient` auto-instrumentation injects the `baggage` HTTP header |
+| Kafka producers | `quarkus-messaging-kafka` injects the `baggage` Kafka message header |
+| Kafka consumers | `quarkus-messaging-kafka` extracts the `baggage` header and restores context |
+
+### Testing
+
+Pass `x-request-id` on any payment call:
+
+```bash
+curl -X POST http://localhost:9090/payments \
+  -H "Content-Type: application/json" \
+  -H "x-request-id: my-e2e-id-123" \
+  -d '{"paymentId":"1","amount":100.00,"currency":"EUR","debtorAccount":"LT001","creditorAccount":"LT002"}'
+```
+
+In Jaeger, every span in the trace — `POST /payments`, `RunWorkflow`, `RunActivity:ReserveFunds`, `RunActivity:Transfer`, `RunActivity:Publish` — will have the tag `x-request-id=my-e2e-id-123`.
+
+If no header is sent, a UUID is generated automatically and propagated the same way.
+
+---
+
+### Kafka entry point (code sample)
+
+When **Kafka is the entry point** (no prior HTTP request), `quarkus-messaging-kafka` + OTel auto-instrumentation extracts the `baggage` Kafka header automatically. If the message originates from an external system with no baggage, generate a correlation ID:
+
+```kotlin
+@ApplicationScoped
+class PaymentEventConsumer {
+
+    @Incoming("payment-events")
+    fun consume(message: Message<PaymentEvent>): Uni<Void> {
+        // OTel has already extracted baggage from Kafka headers.
+        // If x-request-id is missing (external producer with no baggage), generate one.
+        val existing = Baggage.current().getEntryValue("x-request-id")
+
+        if (existing != null) {
+            // BaggageSpanProcessor already added it to the consumer span — nothing to do
+            return processEvent(message.payload).replaceWithVoid()
+        }
+
+        val generated = UUID.randomUUID().toString()
+        val scope = Context.current()
+            .with(Baggage.current().toBuilder().put("x-request-id", generated).build())
+            .makeCurrent()
+        Span.current().setAttribute("x-request-id", generated)
+
+        // scope MUST be closed after processing — use .eventually{} to guarantee it
+        return processEvent(message.payload)
+            .replaceWithVoid()
+            .eventually { scope.close() }
+    }
+
+    private fun processEvent(event: PaymentEvent): Uni<PaymentEvent> =
+        Uni.createFrom().item(event)
+}
+```
+
+> **Blocking consumers** — use `try/finally` instead:
+> ```kotlin
+> @Incoming("payment-events")
+> @Blocking
+> fun consume(event: PaymentEvent) {
+>     val scope = ensureCorrelationId()
+>     try {
+>         processEvent(event)
+>     } finally {
+>         scope.close()
+>     }
+> }
+>
+> private fun ensureCorrelationId(): Scope {
+>     val id = Baggage.current().getEntryValue("x-request-id") ?: UUID.randomUUID().toString()
+>     Span.current().setAttribute("x-request-id", id)
+>     return Context.current()
+>         .with(Baggage.current().toBuilder().put("x-request-id", id).build())
+>         .makeCurrent()
+> }
+> ```
+
+### Kafka producer (no code needed)
+
+Once `x-request-id` is in baggage — set by `CorrelationFilter` for HTTP entry points, or by the consumer snippet above for Kafka entry points — `quarkus-messaging-kafka` injects it into every outbound Kafka message's `baggage` header automatically.
