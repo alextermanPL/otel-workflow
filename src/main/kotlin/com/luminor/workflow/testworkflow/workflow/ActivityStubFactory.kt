@@ -1,4 +1,4 @@
-package com.luminor.workflow.testworkflow.workflow
+package com.plumery.workflow.testworkflow.workflow
 
 import io.temporal.activity.ActivityOptions
 import io.temporal.workflow.Workflow

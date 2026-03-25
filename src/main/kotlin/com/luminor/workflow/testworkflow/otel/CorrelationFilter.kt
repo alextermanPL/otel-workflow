@@ -1,4 +1,4 @@
-package com.luminor.workflow.testworkflow.otel
+package com.plumery.workflow.testworkflow.otel
 
 import io.opentelemetry.api.baggage.Baggage
 import io.opentelemetry.api.trace.Span

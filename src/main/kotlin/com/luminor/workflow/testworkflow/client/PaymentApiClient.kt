@@ -1,6 +1,6 @@
-package com.luminor.workflow.testworkflow.client
+package com.plumery.workflow.testworkflow.client
 
-import com.luminor.workflow.testworkflow.model.TransferResponse
+import com.plumery.workflow.testworkflow.model.TransferResponse
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path

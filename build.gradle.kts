@@ -92,7 +92,7 @@ val quarkusCommonConfig = """
         log:
             level: INFO
             category:
-                com.luminor.workflow.testworkflow:
+                com.plumery.workflow.testworkflow:
                     level: DEBUG
             console:
                 format: '%p (%d{yyyy-MM-dd HH:mm:ss,SSS}) [%X] [%t] [%c:%L]: %s%e%n'

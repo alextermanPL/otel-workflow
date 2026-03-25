@@ -1,9 +1,9 @@
-package com.luminor.workflow.testworkflow.api
+package com.plumery.workflow.testworkflow.api
 
-import com.luminor.workflow.testworkflow.model.PaymentRequest
-import com.luminor.workflow.testworkflow.model.ReservationResult
-import com.luminor.workflow.testworkflow.workflow.PaymentWorkflow
-import com.luminor.workflow.testworkflow.workflow.WorkflowConstants
+import com.plumery.workflow.testworkflow.model.PaymentRequest
+import com.plumery.workflow.testworkflow.model.ReservationResult
+import com.plumery.workflow.testworkflow.workflow.PaymentWorkflow
+import com.plumery.workflow.testworkflow.workflow.WorkflowConstants
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
 import jakarta.enterprise.context.ApplicationScoped

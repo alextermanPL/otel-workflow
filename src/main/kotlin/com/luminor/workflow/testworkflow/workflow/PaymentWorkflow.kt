@@ -1,8 +1,8 @@
-package com.luminor.workflow.testworkflow.workflow
+package com.plumery.workflow.testworkflow.workflow
 
-import com.luminor.workflow.testworkflow.model.PaymentRequest
-import com.luminor.workflow.testworkflow.model.PaymentResult
-import com.luminor.workflow.testworkflow.model.ReservationResult
+import com.plumery.workflow.testworkflow.model.PaymentRequest
+import com.plumery.workflow.testworkflow.model.PaymentResult
+import com.plumery.workflow.testworkflow.model.ReservationResult
 import io.temporal.workflow.SignalMethod
 import io.temporal.workflow.WorkflowInterface
 import io.temporal.workflow.WorkflowMethod

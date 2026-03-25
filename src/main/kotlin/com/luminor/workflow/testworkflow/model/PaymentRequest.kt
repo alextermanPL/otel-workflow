@@ -1,4 +1,4 @@
-package com.luminor.workflow.testworkflow.model
+package com.plumery.workflow.testworkflow.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal

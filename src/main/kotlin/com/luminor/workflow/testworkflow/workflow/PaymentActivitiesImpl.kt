@@ -1,7 +1,7 @@
-package com.luminor.workflow.testworkflow.workflow
+package com.plumery.workflow.testworkflow.workflow
 
-import com.luminor.workflow.testworkflow.client.PaymentApiClient
-import com.luminor.workflow.testworkflow.model.TransferResponse
+import com.plumery.workflow.testworkflow.client.PaymentApiClient
+import com.plumery.workflow.testworkflow.model.TransferResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkiverse.temporal.TemporalActivity

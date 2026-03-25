@@ -1,6 +1,6 @@
-package com.luminor.workflow.testworkflow.workflow
+package com.plumery.workflow.testworkflow.workflow
 
-import com.luminor.workflow.testworkflow.model.TransferResponse
+import com.plumery.workflow.testworkflow.model.TransferResponse
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 

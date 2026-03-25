@@ -1,4 +1,4 @@
-package com.luminor.workflow.testworkflow.otel
+package com.plumery.workflow.testworkflow.otel
 
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.config.MeterFilter

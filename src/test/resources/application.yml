@@ -2,7 +2,7 @@ quarkus:
   log:
     level: INFO
     category:
-      com.luminor.workflow.testworkflow:
+      com.plumery.workflow.testworkflow:
         level: DEBUG
     console:
       json: false
