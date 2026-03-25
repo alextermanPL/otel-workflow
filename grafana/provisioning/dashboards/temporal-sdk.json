@@ -43,7 +43,18 @@
     },
     {
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
         "overrides": []
       },
       "gridPos": {
@@ -54,21 +65,57 @@
       },
       "id": 75,
       "options": {
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
+        "tooltip": {
+          "mode": "multi"
         },
-        "content": "# CPU placeholder\n\nMetrics from the Temporal SDK should be complemented with the workers' CPU and memory usage statistics.",
-        "mode": "markdown"
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       },
       "pluginVersion": "11.6.1",
       "title": "CPU usage",
-      "type": "text"
+      "type": "timeseries",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "JVM process CPU usage (0\u20131 = 0\u2013100%) and system CPU usage across all cores.",
+      "targets": [
+        {
+          "expr": "process_cpu_usage",
+          "legendFormat": "process CPU",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "system_cpu_usage",
+          "legendFormat": "system CPU",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        }
+      ]
     },
     {
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10
+          },
+          "unit": "bytes"
+        },
         "overrides": []
       },
       "gridPos": {
@@ -79,17 +126,54 @@
       },
       "id": 76,
       "options": {
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
+        "tooltip": {
+          "mode": "multi"
         },
-        "content": "# Memory placeholder\n\nMetrics from the Temporal SDK should be complemented with the workers' CPU and memory usage statistics.",
-        "mode": "markdown"
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       },
       "pluginVersion": "11.6.1",
       "title": "Memory usage",
-      "type": "text"
+      "type": "timeseries",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "JVM heap memory used vs max, and non-heap (Metaspace, CodeCache).",
+      "targets": [
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
+          "legendFormat": "heap used",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
+          "legendFormat": "heap max",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"nonheap\"})",
+          "legendFormat": "non-heap used",
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        }
+      ]
     },
     {
       "collapsed": false,
@@ -3347,6 +3431,553 @@
       ],
       "title": "Sticky Cache Miss",
       "type": "timeseries"
+    },
+    {
+      "id": 83,
+      "type": "row",
+      "title": "Timeouts",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 160
+      }
+    },
+    {
+      "id": 84,
+      "type": "timeseries",
+      "title": "Task Dispatch Timeouts (poll_timeouts)",
+      "description": "Rate of tasks queued on the server that were not picked up by a worker before the poll window expired. Broken down by task_type (Workflow / Activity) and task queue. Source: Temporal server.\n\nNote: SDK-level execution timeouts (workflow/activity start-to-close) are not exposed as a separate counter in Java SDK 1.32 \u2014 they surface as failures in Workflow Failures By Type and Activity Failed panels.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 161
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(poll_timeouts{namespace=~\"$namespace\", taskqueue=\"payment_queue\"}[$__rate_interval])",
+          "legendFormat": "{{task_type}} / {{taskqueue}}",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true,
+          "intervalFactor": 2
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "type": "row",
+      "title": "Server Health",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 169
+      }
+    },
+    {
+      "id": 86,
+      "type": "timeseries",
+      "title": "Service Request Rate",
+      "description": "Rate of gRPC requests handled by each Temporal server component (frontend, history, matching). Frontend handles client/worker calls; history manages workflow state; matching dispatches tasks to workers.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 170
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (service_name) (rate(service_requests{service_name=~\"frontend|history|matching\"}[$__rate_interval]))",
+          "legendFormat": "{{service_name}}",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true,
+          "intervalFactor": 2
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "type": "timeseries",
+      "title": "Service Errors by Type",
+      "description": "Rate of server-side errors broken down by error type and service. serviceerror_NotFound on SignalWorkflowExecution = signal sent to already-completed workflow (normal). serviceerror_Unavailable or ResourceExhausted = server under pressure.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 170
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (service_name, error_type) (rate(service_error_with_type{service_name=~\"frontend|history|matching\"}[$__rate_interval]))",
+          "legendFormat": "{{service_name}} / {{error_type}}",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true,
+          "intervalFactor": 2
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "type": "timeseries",
+      "title": "Service Latency p95 (ms)",
+      "description": "p95 latency of gRPC calls handled internally by the Temporal server, per service. Elevated frontend latency directly delays workflow starts and signal delivery. Elevated history latency slows workflow task processing.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 178
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (service_name, le) (rate(service_latency_bucket{service_name=~\"frontend|history|matching\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "p95 {{service_name}}",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true,
+          "intervalFactor": 2
+        }
+      ]
+    },
+    {
+      "id": 89,
+      "type": "timeseries",
+      "title": "Persistence Latency p95 (ms)",
+      "description": "p95 latency of database operations (Postgres) per operation type. Temporal is heavily DB-dependent: every workflow state transition writes to persistence. Latency above 10ms here will slow the entire cluster.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 178
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (operation, le) (rate(persistence_latency_bucket{namespace=\"default\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "{{operation}}",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true,
+          "intervalFactor": 2
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "type": "timeseries",
+      "title": "Persistence Errors",
+      "description": "Rate of database errors by type. serviceerror_NotFound on GetTaskQueue is normal on startup. Sustained errors on CreateWorkflowExecution or UpdateWorkflowExecution indicate DB problems.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 186
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (operation, error_type) (rate(persistence_error_with_type{namespace=\"default\"}[$__rate_interval]))",
+          "legendFormat": "{{operation}} / {{error_type}}",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true,
+          "intervalFactor": 2
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "type": "row",
+      "title": "Worker Saturation",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 194
+      }
+    },
+    {
+      "id": 92,
+      "type": "timeseries",
+      "title": "Worker Saturation \u2014 Schedule-to-Start / Slots / Backlog",
+      "description": "Three saturation signals on one panel.\n\nLeft axis: schedule-to-start p95 (ms) \u2014 time tasks wait before a worker picks them up.\nRight axis: slots available (count) and task queue backlog (count).\n\nSaturation pattern: schedule-to-start rises AND slots-available drops toward 0 AND backlog grows. All three moving together confirms the worker is overwhelmed. schedule-to-start rising alone (slots still available) usually means the Temporal server is slow \u2014 check Service Latency.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 195
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Slots / Backlog"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Slots / Backlog"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Slots / Backlog"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (task_queue, le) (rate(temporal_workflow_task_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "wf schedule-to-start p95 ms",
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (task_queue, le) (rate(temporal_activity_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "act schedule-to-start p95 ms",
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "temporal_worker_task_slots_available{namespace=~\"$namespace\", worker_type=\"WorkflowWorker\"}",
+          "legendFormat": "wf slots available",
+          "refId": "C",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "temporal_worker_task_slots_available{namespace=~\"$namespace\", worker_type=\"ActivityWorker\"}",
+          "legendFormat": "act slots available",
+          "refId": "D",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        },
+        {
+          "expr": "sum by (task_type) (approximate_backlog_count{namespace=~\"$namespace\", taskqueue=\"payment_queue\"})",
+          "legendFormat": "backlog {{task_type}}",
+          "refId": "E",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "range": true
+        }
+      ]
     }
   ],
   "preload": false,
