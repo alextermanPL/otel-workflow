@@ -8,9 +8,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven {
-        url = uri("https://packages.confluent.io/maven/")
-    }
 }
 
 // Ensure consistent Java/Kotlin toolchains across all modules
@@ -49,30 +46,10 @@ dependencies {
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
     implementation("io.quarkus:quarkus-info")
     implementation("io.quarkus:quarkus-config-yaml")
-//    implementation("io.quarkus:quarkus-logging-json")
-    implementation("io.quarkus:quarkus-rest-client")
-    implementation("io.quarkus:quarkus-rest-client-jackson")
 
-
-    implementation("io.quarkus:quarkus-smallrye-fault-tolerance")
     implementation("io.quarkus:quarkus-opentelemetry")
-    implementation("io.opentelemetry:opentelemetry-extension-trace-propagators")
-    implementation("io.opentelemetry:opentelemetry-extension-kotlin")
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.13")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0")
-    implementation("org.xerial.snappy:snappy-java:1.1.10.7")
-    implementation("com.google.crypto.tink:tink:1.9.0")
     implementation("io.quarkiverse.temporal:quarkus-temporal:0.2.1")
-
-
-
-
-
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:2.1.21")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:2.1.21")
 
     // Testing dependencies
     testImplementation("io.quarkus:quarkus-junit5")

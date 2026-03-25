@@ -522,7 +522,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, operation, le) (rate(temporal_request_latency_seconds_bucket{namespace=~\"$namespace\" }[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, operation, le) (rate(temporal_request_latency_seconds_bucket{namespace=~\"$namespace\" }[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; operation: {{ operation }}",
@@ -743,7 +743,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, operation, le) (rate(temporal_long_request_latency_seconds_bucket{namespace=~\"$namespace\" }[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, operation, le) (rate(temporal_long_request_latency_seconds_bucket{namespace=~\"$namespace\" }[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; operation: {{ operation }}",
@@ -957,7 +957,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, workflow_type, le) (rate(temporal_workflow_endtoend_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, workflow_type, le) (rate(temporal_workflow_endtoend_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace:{{namespace}}; WorkflowType {{workflow_type}}",
@@ -1076,6 +1076,523 @@
         "x": 0,
         "y": 52
       },
+      "id": 77,
+      "panels": [],
+      "title": "Workflow Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 53
+      },
+      "id": 78,
+      "interval": "5s",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "v10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (namespace, workflow_type) (rate(temporal_request_total{namespace=~\"$namespace\", operation=\"StartWorkflowExecution\"}[$__rate_interval]))",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "{{namespace}} / {{workflow_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Workflows Started / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 53
+      },
+      "id": 79,
+      "interval": "5s",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "v10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (namespace, workflow_type) (rate(temporal_workflow_completed_total{namespace=~\"$namespace\"}[$__rate_interval]))",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "completed / {{workflow_type}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (namespace, workflow_type) (rate(temporal_workflow_failed_total{namespace=~\"$namespace\"}[$__rate_interval]))",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "failed / {{workflow_type}}",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (namespace, workflow_type) (rate(temporal_workflow_cancelled_total{namespace=~\"$namespace\"}[$__rate_interval]))",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "cancelled / {{workflow_type}}",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (namespace, workflow_type) (rate(temporal_workflow_continue_as_new_total{namespace=~\"$namespace\"}[$__rate_interval]))",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "continue_as_new / {{workflow_type}}",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Workflows Terminal States / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
+            ]
+          },
+          "mappings": [],
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 53
+      },
+      "id": 80,
+      "interval": "5s",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "pluginVersion": "v10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "clamp_min(\n  (\n    sum(temporal_request_total{operation=\"StartWorkflowExecution\", namespace=~\"$namespace\"}) or vector(0)\n  ) - (\n    sum(temporal_workflow_completed_total{namespace=~\"$namespace\"}) or vector(0)\n  ) - (\n    sum(temporal_workflow_failed_total{namespace=~\"$namespace\"}) or vector(0)\n  ) - (\n    sum(temporal_workflow_cancelled_total{namespace=~\"$namespace\"}) or vector(0)\n  ) - (\n    sum(temporal_workflow_continue_as_new_total{namespace=~\"$namespace\"}) or vector(0)\n  ),\n  0\n)",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "in progress",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Workflows In Progress",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 82,
+      "interval": "5s",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "v10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (reason) (rate(payment_rejected_total[$__rate_interval]))",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "{{reason}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Payment Rejections / sec by Reason",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "id": 81,
+      "interval": "5s",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "v10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (task_type) (\n  approximate_backlog_count{namespace=~\"$namespace\", taskqueue=\"payment_queue\"}\n)",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "{{task_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Task Queue Backlog \u2014 payment_queue",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 80
+      },
       "id": 11,
       "panels": [],
       "title": "Workflow Task Processing",
@@ -1143,7 +1660,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 81
       },
       "id": 12,
       "interval": "5s",
@@ -1243,7 +1760,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 81
       },
       "id": 15,
       "interval": "5s",
@@ -1270,7 +1787,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, task_queue,  le) (rate(temporal_workflow_task_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, task_queue,  le) (rate(temporal_workflow_task_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; task_queue:{{task_queue}}",
@@ -1344,7 +1861,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 61
+        "y": 89
       },
       "id": 16,
       "interval": "5s",
@@ -1444,7 +1961,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 61
+        "y": 89
       },
       "id": 19,
       "interval": "5s",
@@ -1471,7 +1988,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, workflow_type,  le) (rate(temporal_workflow_task_execution_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, workflow_type,  le) (rate(temporal_workflow_task_execution_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; workflow_type:{{workflow_type}}",
@@ -1544,7 +2061,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 69
+        "y": 97
       },
       "id": 20,
       "interval": "5s",
@@ -1571,7 +2088,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, workflow_type, le) (rate(temporal_workflow_task_replay_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, workflow_type, le) (rate(temporal_workflow_task_replay_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; workflow_type:{{workflow_type}}",
@@ -1644,7 +2161,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 69
+        "y": 97
       },
       "id": 22,
       "interval": "5s",
@@ -1688,7 +2205,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 105
       },
       "id": 23,
       "panels": [],
@@ -1757,7 +2274,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 106
       },
       "id": 24,
       "interval": "5s",
@@ -1857,7 +2374,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 78
+        "y": 106
       },
       "id": 59,
       "interval": "5s",
@@ -1957,7 +2474,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 86
+        "y": 114
       },
       "id": 26,
       "interval": "5s",
@@ -1984,7 +2501,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, activity_type , le) (rate(temporal_activity_execution_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, activity_type , le) (rate(temporal_activity_execution_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; activity_type:{{activity_type}}",
@@ -2001,7 +2518,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 94
+        "y": 122
       },
       "id": 40,
       "panels": [],
@@ -2070,7 +2587,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 95
+        "y": 123
       },
       "id": 36,
       "interval": "5s",
@@ -2170,7 +2687,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 95
+        "y": 123
       },
       "id": 27,
       "interval": "5s",
@@ -2197,7 +2714,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, task_queue , le) (rate(temporal_activity_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval])))\n",
+          "expr": "histogram_quantile(0.95, sum by (namespace, task_queue , le) (rate(temporal_activity_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "namespace: {{ namespace }}; task_queue:{{task_queue}}",
@@ -2214,7 +2731,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 131
       },
       "id": 54,
       "panels": [],
@@ -2283,7 +2800,7 @@
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 104
+        "y": 132
       },
       "id": 44,
       "interval": "5s",
@@ -2382,7 +2899,7 @@
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 104
+        "y": 132
       },
       "id": 68,
       "interval": "5s",
@@ -2425,7 +2942,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 115
+        "y": 143
       },
       "id": 38,
       "panels": [],
@@ -2494,7 +3011,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 116
+        "y": 144
       },
       "id": 42,
       "interval": "5s",
@@ -2593,7 +3110,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 116
+        "y": 144
       },
       "id": 63,
       "interval": "5s",
@@ -2693,7 +3210,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 124
+        "y": 152
       },
       "id": 45,
       "interval": "5s",
@@ -2793,7 +3310,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 124
+        "y": 152
       },
       "id": 43,
       "interval": "5s",
@@ -2860,18 +3377,19 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "",
+        "definition": "label_values(temporal_request_total, namespace)",
         "includeAll": true,
         "multi": true,
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(namespace)",
+          "query": "label_values(temporal_request_total, namespace)",
           "refId": "Prometheus-namespace-Variable-Query"
         },
         "refresh": 2,
         "regex": "",
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       }
     ]
   },
@@ -2883,5 +3401,5 @@
   "timezone": "utc",
   "title": "Temporal Core SDK (OTel) Metrics",
   "uid": "temporal-sdk",
-  "version": 2
+  "version": 12
 }

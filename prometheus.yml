@@ -9,6 +9,11 @@ scrape_configs:
       - targets: ['host.docker.internal:9090']
     metrics_path: '/q/metrics'
 
+  # Temporal server-side metrics (queue depth, persistence, scheduler)
+  - job_name: 'temporal-server'
+    static_configs:
+      - targets: ['temporal:8000']
+
   # OTel collector self-metrics + forwarded OTLP metrics
   - job_name: 'otel-collector'
     static_configs:

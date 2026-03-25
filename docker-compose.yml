@@ -28,8 +28,10 @@ services:
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=postgres
+      - PROMETHEUS_ENDPOINT=0.0.0.0:8000
     ports:
       - "7233:7233"
+      - "8000:8000"   # Temporal server Prometheus metrics
     healthcheck:
       test: ["CMD", "tctl", "--address", "temporal:7233", "workflow", "list"]
       interval: 10s

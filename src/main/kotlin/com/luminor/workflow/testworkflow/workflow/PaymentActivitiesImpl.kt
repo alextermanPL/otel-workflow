@@ -3,6 +3,7 @@ package com.luminor.workflow.testworkflow.workflow
 import com.luminor.workflow.testworkflow.client.PaymentApiClient
 import com.luminor.workflow.testworkflow.model.TransferResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
 import io.quarkiverse.temporal.TemporalActivity
 import io.temporal.failure.ApplicationFailure
 import jakarta.inject.Inject
@@ -14,6 +15,7 @@ private val logger = KotlinLogging.logger {}
 @TemporalActivity(workers = [WorkflowConstants.TASK_QUEUE])
 class PaymentActivitiesImpl @Inject constructor(
     @RestClient private val paymentApiClient: PaymentApiClient,
+    private val meterRegistry: MeterRegistry,
 ) : PaymentActivities {
 
     /**
@@ -55,5 +57,6 @@ class PaymentActivitiesImpl @Inject constructor(
     override fun publishRejected(paymentId: String, reason: String) {
         logger.info { "Publishing payment-rejected for payment $paymentId: $reason" }
         paymentApiClient.rejected(paymentId)
+        meterRegistry.counter("payment.rejected", "reason", reason).increment()
     }
 }
