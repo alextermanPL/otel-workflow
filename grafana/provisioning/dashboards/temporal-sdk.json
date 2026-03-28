@@ -80,7 +80,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "JVM process CPU usage (0\u20131 = 0\u2013100%) and system CPU usage across all cores.",
+      "description": "JVM process CPU usage (0–1) and total host CPU across all cores. Normal: process CPU well below 1.0 under steady load. Problem: process CPU near 1.0 = CPU-bound (check Workflow Task Execution Latency); system CPU high but process low = another process stealing cycles; CPU low but latency high = I/O or thread contention (check JVM Thread States).",
       "targets": [
         {
           "expr": "process_cpu_usage",
@@ -141,7 +141,7 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "JVM heap memory used vs max, and non-heap (Metaspace, CodeCache).",
+      "description": "JVM heap used vs max, and non-heap (Metaspace, CodeCache). Normal: heap fluctuates with GC but stays well below max. Problem: heap approaching max = GC pressure causing latency spikes; monotonically growing heap = memory leak (check Sticky Cache Size and Kafka buffers). Note: JVM thread stacks (~1 MB each) live off-heap and are not shown here.",
       "targets": [
         {
           "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
@@ -303,7 +303,8 @@
         }
       ],
       "title": "RPC Requests Vs Failures",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Total rate of short gRPC calls from the SDK to the Temporal server, and how many fail, per namespace. Normal: failure rate near 0. Problem: any failures → check RPC Failures Per Operation; failures on StartWorkflowExecution = server rejecting new workflows (RPS limit) → check Service Errors by Type."
     },
     {
       "datasource": {
@@ -407,7 +408,8 @@
         }
       ],
       "title": "RPC Failures Per Operation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Failure rate of individual gRPC operations. Normal: all series at 0. Problem: PollWorkflowTaskQueue/PollActivityTaskQueue failures = worker cannot reach server; GetWorkflowExecutionHistory failures = replay failing. Correlate with Service Errors by Type for the server-side view."
     },
     {
       "datasource": {
@@ -511,7 +513,8 @@
         }
       ],
       "title": "RPC Requests Per Operation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Request rate per individual gRPC operation. Normal: Poll operations dominate; StartWorkflowExecution tracks your traffic rate. Problem: high GetWorkflowExecutionHistory rate = frequent replays from scratch → check Sticky Cache Miss and Sticky Cache Forced Eviction."
     },
     {
       "datasource": {
@@ -615,7 +618,8 @@
         }
       ],
       "title": "RPC Latencies (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 round-trip latency of short gRPC calls from the SDK to the Temporal server, in ms. Normal: below 50ms in a local setup. Problem: rising on StartWorkflowExecution or SignalWorkflowExecution = Temporal frontend is slow → check Service Latency p95 and Persistence Latency p95."
     },
     {
       "collapsed": false,
@@ -732,7 +736,8 @@
         }
       ],
       "title": "Long RPC Failures Per Operation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Failure rate of long-poll gRPC calls (PollWorkflowTaskQueue, PollActivityTaskQueue) — the operations that deliver tasks to workers. Normal: 0. Problem: any failures = workers cannot sustain poll connection (network or server rejection)."
     },
     {
       "datasource": {
@@ -836,7 +841,8 @@
         }
       ],
       "title": "Long RPC Latencies (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 latency of long-poll operations (PollWorkflowTaskQueue, PollActivityTaskQueue), in ms. Normal: near 20,000ms when idle (that is the 20s poll timeout, not a problem). Problem: consistently much lower than 20s AND empty polls near 0 = workers always getting tasks (high load) → check Slots Available and Task Queue Backlog."
     },
     {
       "collapsed": false,
@@ -949,14 +955,15 @@
         }
       ],
       "title": "Workflow Completion",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of workflows reaching a successful terminal state, per workflow type. Normal: tracks Workflows Started/sec with a lag equal to average workflow duration. Problem: start rate >> completion rate sustained = backlog growing → check Workflows In Progress, Task Queue Backlog, Slots Available."
     },
     {
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "",
+      "description": "p95 time from workflow start to terminal state, in ms. Workflows that wait for external signals have high end-to-end latency by design. Problem: growing over time under same load = degradation → check JVM Thread States and Activity Execution Latency; sudden jump → check Activity Failed and RPC Latencies.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1150,7 +1157,8 @@
         }
       ],
       "title": "Workflow Failures By Type",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of workflows reaching a failed terminal state. Normal: 0 or low. Problem: sustained failures = unhandled exceptions or exhausted retries (check app logs); spike after deployment = non-determinism introduced by new code (use Workflow.getVersion() for history-safe migration)."
     },
     {
       "collapsed": false,
@@ -1263,7 +1271,8 @@
         }
       ],
       "title": "Workflows Started / sec",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of new workflow executions being started — your inbound traffic rate. Problem: rate is 0 when traffic is expected → check RPC Requests vs Failures; rate far exceeds Workflow Completion/sec → backlog accumulating → check Workflows In Progress."
     },
     {
       "datasource": {
@@ -1402,7 +1411,8 @@
         }
       ],
       "title": "Workflows Terminal States / sec",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "All terminal outcomes in one panel: completed, failed, cancelled, continue-as-new. The total drain rate of the system. Problem: all terminal rates near 0 while started rate is non-zero = total blockage → check Slots Available, Task Queue Backlog, JVM Thread States."
     },
     {
       "datasource": {
@@ -1476,7 +1486,8 @@
         }
       ],
       "title": "Workflows In Progress",
-      "type": "stat"
+      "type": "stat",
+      "description": "Estimated count of workflow executions in a non-terminal state (derived from cumulative counters; resets on worker restart). Java SDK note: each in-progress workflow in the sticky cache holds at least one real JVM thread in WAITING state — a large count here directly explains elevated JVM Thread States (waiting). Problem: never drops after traffic stops = workflows stuck (signal never arriving, stuck activity)."
     },
     {
       "datasource": {
@@ -1527,7 +1538,7 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 62
       },
@@ -1565,7 +1576,8 @@
         }
       ],
       "title": "Payment Rejections / sec by Reason",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "[Custom — replace with your rejection counter] Rate of business-level rejections broken down by reason label. Normal: baseline rejection rate is business-defined. Problem: one reason spiking = systematic failure on that path; all reasons spiking together = systemic failure → check Workflow Failures By Type and Activity Failed."
     },
     {
       "datasource": {
@@ -1666,8 +1678,9 @@
           "refId": "A"
         }
       ],
-      "title": "Task Queue Backlog \u2014 payment_queue",
-      "type": "timeseries"
+      "title": "Task Queue Backlog — payment_queue",
+      "type": "timeseries",
+      "description": "[Custom — replace task queue name] Approximate count of tasks queued on the server not yet picked up by a worker."
     },
     {
       "collapsed": false,
@@ -1780,7 +1793,8 @@
         }
       ],
       "title": "Workflow Task Throughput",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of workflow tasks successfully polled and executed. Each workflow event (signal received, activity completed, timer fired) generates one task. Problem: drops to 0 while workflows are active = workers stopped polling → check Workflow Task Empty Polls."
     },
     {
       "datasource": {
@@ -1880,14 +1894,15 @@
         }
       ],
       "title": "Workflow Task Schedule To Start (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 time between server queuing a workflow task and a worker picking it up, in ms. Normal: below 100ms (sticky execution keeps this near-instant). Problem: rising + Slots Available still high = server bottleneck → check Service Latency p95; rising + Slots Available at 0 = worker saturated → check Workflows In Progress and JVM Thread States (Java SDK: each in-progress workflow holds a thread slot)."
     },
     {
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
       },
-      "description": "",
+      "description": "Rate of workflow tasks that failed during execution. Normal: 0 — any non-zero value is serious. Problem: failures = non-determinism in workflow code (check app logs for NonDeterministicException); spike after deployment = new code incompatible with existing histories → use Workflow.getVersion().",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2081,7 +2096,8 @@
         }
       ],
       "title": "Workflow Task Execution Latency (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 time to run workflow code from a task start to the next blocking point, in ms. Normal: below 50ms — workflow code should only advance state. Problem: high = workflow code doing heavy computation or blocking I/O (never use Thread.sleep() in workflow code); correlated with CPU spikes = GC pauses."
     },
     {
       "datasource": {
@@ -2181,7 +2197,8 @@
         }
       ],
       "title": "Workflow Task Replay Latency (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 time to replay a workflow's full history from scratch when not in the sticky cache, in ms. Problem: growing over time = history length growing (use continue_as_new to truncate near the 50,000 event limit); high replay AND Sticky Cache Miss rising = workers replaying too often → increase workflowCacheSize."
     },
     {
       "datasource": {
@@ -2281,7 +2298,8 @@
         }
       ],
       "title": "Workflow Task Empty Polls",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of long-poll requests for workflow tasks that returned empty (20s window expired, no task). Normal: high empty poll rate is healthy when idle — workers are ready and waiting. Problem: empty polls drop to 0 AND Task Queue Backlog is non-zero = tasks queued but no worker picking them up → check Slots Available."
     },
     {
       "collapsed": false,
@@ -2394,7 +2412,8 @@
         }
       ],
       "title": "Activity Throughput",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of activities successfully dispatched to and started by workers. Problem: drops to 0 while workflows are active = no activities dispatched → check Slots Available (ActivityWorker) and Empty Activity Polls."
     },
     {
       "datasource": {
@@ -2494,7 +2513,8 @@
         }
       ],
       "title": "Activity Failed",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of activity executions that threw an exception, per activity type. Temporal retries per the configured retry policy. Normal: 0 or low. Problem: sustained failures on one type = that dependency is down; all types failing = systemic issue; exhausted retries will cause Workflow Failures By Type to spike."
     },
     {
       "datasource": {
@@ -2594,7 +2614,8 @@
         }
       ],
       "title": "Activity Execution Latencies (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 time from activity start to return, per activity type, in ms. Problem: growing on one type = that dependency is slowing down; high latency AND JVM Thread States (waiting) growing = activities are blocking JVM threads waiting for I/O — each concurrent activity holds one thread for its full duration."
     },
     {
       "collapsed": false,
@@ -2707,7 +2728,8 @@
         }
       ],
       "title": "Empty Activity Polls ",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of long-poll requests for activity tasks that returned empty. Normal: high empty poll rate is healthy when idle — activity workers are ready and waiting. Problem: empty polls drop to 0 AND Task Queue Backlog (Activity) growing = activity workers not picking up tasks → check Slots Available (ActivityWorker)."
     },
     {
       "datasource": {
@@ -2798,16 +2820,17 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (namespace, task_queue , le) (rate(temporal_activity_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (namespace, task_queue, activity_type, le) (rate(temporal_activity_schedule_to_start_latency_seconds_bucket{namespace=~\"$namespace\"}[$__rate_interval]))) * 1000",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "namespace: {{ namespace }}; task_queue:{{task_queue}}",
+          "legendFormat": "{{activity_type}} ({{task_queue}})",
           "range": true,
           "refId": "B"
         }
       ],
       "title": "Activity Schedule To Start (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "p95 time from Temporal scheduling an activity to a worker picking it up, in ms. Pure queueing time — the activity has not started yet. Problem: rising + Slots Available (ActivityWorker) at 0 = activity workers saturated → check Activity Execution Latency (slow activities hold slots longer); rising + Slots Available still high = server-side dispatch delay → check Service Latency p95."
     },
     {
       "collapsed": false,
@@ -2919,7 +2942,8 @@
         }
       ],
       "title": "Slots Available",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Number of free task execution slots per worker type (WorkflowWorker and ActivityWorker). Normal: well above 0. Problem: approaching 0 = worker saturated. Java SDK caveat: slots NOT at 0 does NOT mean the worker is healthy — each in-progress workflow holds a real JVM thread in WAITING state regardless of slot count. Also check JVM Thread States and Sticky Cache Size; the real limit is maxWorkflowThreadCount (default 600)."
     },
     {
       "datasource": {
@@ -3018,7 +3042,8 @@
         }
       ],
       "title": "Slots Used",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Number of task execution slots currently occupied, per worker type. Complement of Slots Available. Problem: at maximum (= Slots Available at 0) = saturated; steadily growing = tasks running slower than arriving → check Activity Execution Latency."
     },
     {
       "collapsed": false,
@@ -3130,7 +3155,8 @@
         }
       ],
       "title": "Sticky Cache Size",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Number of workflow executions held in the worker's in-memory sticky cache. Java SDK: each cached workflow holds at least one real JVM thread in WAITING state. Normal: grows with active workflows, bounded by workflowCacheSize (default 10,000). Problem: at the limit = evictions begin → check Sticky Cache Forced Eviction; high sticky cache AND high Memory Usage = workflow state consuming significant heap."
     },
     {
       "datasource": {
@@ -3230,7 +3256,8 @@
         }
       ],
       "title": "Sticky Cache Forced Eviction",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of workflows forcibly removed from the sticky cache to free space. When evicted, the next task must replay from full history. Normal: 0 or very low. Problem: sustained rate = workflowCacheSize too small → increase it; high eviction AND high Workflow Task Replay Latency = replays are expensive and causing latency."
     },
     {
       "datasource": {
@@ -3330,7 +3357,8 @@
         }
       ],
       "title": "Sticky Cache Hit",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of workflow tasks served directly from the sticky cache (no replay needed). Normal: high and stable. Problem: dropping = cache is being evicted too often → check Sticky Cache Forced Eviction; near 0 = caching is effectively disabled (workflowCacheSize too small or worker restarts frequently)."
     },
     {
       "datasource": {
@@ -3430,7 +3458,8 @@
         }
       ],
       "title": "Sticky Cache Miss",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Rate of workflow tasks not found in the sticky cache, requiring full history replay. Normal: low. Problem: high AND Sticky Cache Forced Eviction rising = cache too small; high WITHOUT evictions = workflows being routed to workers that do not have them cached (sticky queue routing issue)."
     },
     {
       "id": 83,
@@ -3449,7 +3478,7 @@
       "id": 84,
       "type": "timeseries",
       "title": "Task Dispatch Timeouts (poll_timeouts)",
-      "description": "Rate of tasks queued on the server that were not picked up by a worker before the poll window expired. Broken down by task_type (Workflow / Activity) and task queue. Source: Temporal server.\n\nNote: SDK-level execution timeouts (workflow/activity start-to-close) are not exposed as a separate counter in Java SDK 1.32 \u2014 they surface as failures in Workflow Failures By Type and Activity Failed panels.",
+      "description": "Rate of tasks on the Temporal server that expired before any worker picked them up. Replace `payment_queue` with your task queue name. Normal: 0. Problem: non-zero + empty polls > 0 = workers alive but cannot keep up; non-zero + empty polls = 0 = workers stopped polling → check Slots Available.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3515,7 +3544,7 @@
       "id": 86,
       "type": "timeseries",
       "title": "Service Request Rate",
-      "description": "Rate of gRPC requests handled by each Temporal server component (frontend, history, matching). Frontend handles client/worker calls; history manages workflow state; matching dispatches tasks to workers.",
+      "description": "Rate of internal gRPC calls handled by each Temporal server component. Frontend handles client/worker API calls; History manages workflow state transitions; Matching dispatches tasks to workers. Problem: History rate very high = heavy replays → check Sticky Cache Miss; any component drops to 0 = that component has stopped.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3568,7 +3597,7 @@
       "id": 87,
       "type": "timeseries",
       "title": "Service Errors by Type",
-      "description": "Rate of server-side errors broken down by error type and service. serviceerror_NotFound on SignalWorkflowExecution = signal sent to already-completed workflow (normal). serviceerror_Unavailable or ResourceExhausted = server under pressure.",
+      "description": "Rate of server-side errors broken down by error type and component. Normal: serviceerror_NotFound on SignalWorkflowExecution is expected (signal to already-completed workflow). Problem: ResourceExhausted = server RPS limits hit (seen in server logs as 'Per shard RPS warn limit exceeded'); serviceerror_Unavailable = server or DB unreachable.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3621,7 +3650,7 @@
       "id": 88,
       "type": "timeseries",
       "title": "Service Latency p95 (ms)",
-      "description": "p95 latency of gRPC calls handled internally by the Temporal server, per service. Elevated frontend latency directly delays workflow starts and signal delivery. Elevated history latency slows workflow task processing.",
+      "description": "p95 latency of internal gRPC operations within the Temporal server per component, in ms. Normal: frontend < 20ms, history < 50ms, matching < 50ms. Problem: history latency rising = DB is the bottleneck → check Persistence Latency p95; frontend latency rising = client-facing calls slow → will appear as elevated RPC Latencies.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3674,7 +3703,7 @@
       "id": 89,
       "type": "timeseries",
       "title": "Persistence Latency p95 (ms)",
-      "description": "p95 latency of database operations (Postgres) per operation type. Temporal is heavily DB-dependent: every workflow state transition writes to persistence. Latency above 10ms here will slow the entire cluster.",
+      "description": "p95 latency of database (Postgres) operations per operation type, in ms. Temporal writes to DB on every workflow state transition. Normal: below 5ms in a local setup. Problem: any operation above 10ms sustained = Temporal server slows globally; UpdateWorkflowExecution is the most frequent write — its latency is the primary DB bottleneck signal.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3727,7 +3756,7 @@
       "id": 90,
       "type": "timeseries",
       "title": "Persistence Errors",
-      "description": "Rate of database errors by type. serviceerror_NotFound on GetTaskQueue is normal on startup. Sustained errors on CreateWorkflowExecution or UpdateWorkflowExecution indicate DB problems.",
+      "description": "Rate of database errors per operation and error category. Normal: serviceerror_NotFound on GetTaskQueue at startup is expected. Problem: any write operation errors = workflows may fail or get stuck silently → investigate DB health immediately.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3792,8 +3821,8 @@
     {
       "id": 92,
       "type": "timeseries",
-      "title": "Worker Saturation \u2014 Schedule-to-Start / Slots / Backlog",
-      "description": "Three saturation signals on one panel.\n\nLeft axis: schedule-to-start p95 (ms) \u2014 time tasks wait before a worker picks them up.\nRight axis: slots available (count) and task queue backlog (count).\n\nSaturation pattern: schedule-to-start rises AND slots-available drops toward 0 AND backlog grows. All three moving together confirms the worker is overwhelmed. schedule-to-start rising alone (slots still available) usually means the Temporal server is slow \u2014 check Service Latency.",
+      "title": "Worker Saturation — Schedule-to-Start / Slots / Backlog",
+      "description": "All worker saturation signals in one panel. Left axis: schedule-to-start p95 (ms) for workflow and activity tasks. Right axis: slots available and backlog. Pattern 1 (worker saturated): schedule-to-start rising + slots at 0 + backlog growing. Pattern 2 (server bottleneck): schedule-to-start rising + slots still high + empty polls non-zero → check Service Latency p95. Pattern 3 (no pollers): backlog growing + empty polls = 0 + pollers = 0 → workers crashed.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -3975,6 +4004,816 @@
             "type": "prometheus",
             "uid": "$datasource"
           },
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "rate(temporal_activity_poll_no_task_total{namespace=~\"$namespace\", task_queue=\"payment-queue\"}[$__rate_interval])",
+          "legendFormat": "act poll no-task/sec (→0 = pollers saturated)",
+          "range": true,
+          "refId": "F",
+          "hide": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "temporal_num_pollers{namespace=~\"$namespace\", task_queue=\"payment-queue\", poller_type=\"activity_task\"}",
+          "legendFormat": "act pollers count",
+          "range": true,
+          "refId": "G",
+          "hide": false
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 200
+      },
+      "id": 100,
+      "panels": [],
+      "title": "Kafka Metrics",
+      "type": "row"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 201
+      },
+      "id": 101,
+      "title": "Kafka Producer: Message Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_producer_record_send_rate",
+          "legendFormat": "Sent Rate: {{client_id}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kafka_producer_record_error_total[$__rate_interval])",
+          "legendFormat": "Errors: {{client_id}}",
+          "refId": "B"
+        }
+      ],
+      "description": "Standard Kafka producer metrics. Rate of records the producer attempts to send per second, and send errors. Filter by client_id to match your producer. Normal: error rate is 0. Problem: error rate > 0 = messages failing to reach broker → check Kafka Producer: Buffer Pressure; send rate drops while Activity Throughput stays normal = Kafka-producing activity failing before send → check Activity Failed."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 201
+      },
+      "id": 102,
+      "title": "Kafka Producer: Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_producer_outgoing_byte_rate",
+          "legendFormat": "Outgoing: {{client_id}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka producer metric. Bytes per second leaving the Kafka producer. Filter by client_id. Normal: proportional to message rate × average message size. Problem: bytes drop while record rate stays same = messages getting smaller; both drop = throughput starvation → check Kafka Producer: Buffer Pressure."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 201
+      },
+      "id": 103,
+      "title": "Kafka Producer: Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_producer_request_latency_avg",
+          "legendFormat": "Request Latency: {{client_id}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka producer metric. Average round-trip latency of a produce request to the broker and back, in ms. Filter by client_id. Normal: below 5ms with acks=1 in a local setup. Problem: rising = broker is slow → compare with Broker Produce Latency in the Kafka Cluster dashboard; high AND Activity Execution Latency elevated = activity blocking a JVM thread waiting for ACK → check JVM Thread States."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 209
+      },
+      "id": 104,
+      "title": "Kafka Consumer: Message Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_consumer_fetch_manager_records_consumed_rate",
+          "legendFormat": "Consumed Rate: {{topic}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka consumer metric. Rate of records consumed per second per topic. Filter by topic. Normal: tracks the produce rate; consumer lag stays near 0. Problem: rate drops = consumer slow or stopped → check Kafka Consumer: Lag; rate is 0 = consumer not running or lost partition assignment → check Rebalance Latency."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 209
+      },
+      "id": 105,
+      "title": "Kafka Consumer: Lag",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_consumer_fetch_manager_records_lag",
+          "legendFormat": "Lag: {{topic}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka consumer metric. Records produced but not yet consumed, per topic. Filter by topic. Normal: near 0. Problem: growing = consumer cannot keep up; lag is 0 AND message rate is 0 AND producer is producing = consumer is not running."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 209
+      },
+      "id": 106,
+      "title": "Kafka Consumer: Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(kafka_consumer_incoming_byte_total[$__rate_interval])",
+          "legendFormat": "Incoming: {{client_id}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka consumer metric. Bytes per second incoming to the Kafka consumer. Filter by client_id. Normal: proportional to message rate × average message size."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 217
+      },
+      "id": 107,
+      "title": "Kafka Consumer: Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_consumer_fetch_manager_fetch_latency_avg",
+          "legendFormat": "Fetch Latency: {{client_id}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka consumer metric. Average time the consumer waits for the broker to return a fetch response, in ms. Filter by client_id. Normal: below 100ms. Problem: very high = broker is slow, or consumer configured with large fetch.max.wait.ms."
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 217
+      },
+      "id": 108,
+      "title": "Kafka Consumer: Rebalance Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_consumer_coordinator_rebalance_latency_avg",
+          "legendFormat": "Rebalance Latency: {{client_id}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Standard Kafka consumer metric. Average duration of consumer group rebalancing events. Rebalances temporarily pause all consumption. Filter by client_id. Normal: rare and short (below 1s). Problem: frequent or long rebalances = consumers crashing and rejoining; rebalance spike coincides with Kafka Consumer: Lag spike = consumption was paused."
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 62
+      },
+      "id": 109,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "sum by (reason) (payment_rejected_total)",
+          "hide": false,
+          "legendFormat": "{{reason}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Rejected Payments — Total by Reason",
+      "type": "timeseries",
+      "description": "[Custom — replace with your rejection counter] Cumulative total rejected payments grouped by reason since startup. Unlike the rate panel, this shows the running total for post-incident review. Problem: one reason disproportionately large = that path has a systematic problem."
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 225
+      },
+      "id": 110,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "kafka_producer_waiting_threads",
+          "legendFormat": "waiting threads: {{client_id}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Kafka Producer: Waiting Threads",
+      "type": "timeseries",
+      "description": "Standard Kafka producer metric. Number of threads blocked waiting for buffer space in the producer's record accumulator — before the message is even sent. Filter by client_id. Normal: 0. Problem: > 0 = producer buffer full, broker cannot consume fast enough → check Kafka Producer: Buffer Pressure. Distinct from ACK blocking: this is buffer allocation (before send), not waiting for broker ACK."
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "wait ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "exhausted/sec"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 225
+      },
+      "id": 111,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "kafka_producer_bufferpool_wait_ratio",
+          "legendFormat": "wait ratio",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "editorMode": "code",
+          "expr": "rate(kafka_producer_buffer_exhausted_total[$__rate_interval])",
+          "legendFormat": "exhausted/sec",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Kafka Producer: Buffer Pressure",
+      "type": "timeseries",
+      "description": "Standard Kafka producer metrics. bufferpool_wait_ratio: fraction of time the producer spends waiting for buffer space (0 = no pressure, 1 = always waiting). buffer_exhausted_total: times the buffer was completely full. Filter by client_id. Normal: wait_ratio near 0, exhausted static. Problem: wait_ratio > 0.1 sustained → check Kafka Producer: Latency; exhausted counter incrementing = buffer full, messages at risk of being dropped."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 233
+      },
+      "id": 112,
+      "panels": [],
+      "title": "JVM Thread States — Activity Worker Threads",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "JVM thread count broken down by lifecycle state: waiting, timed-waiting, blocked, runnable. Counts all threads — Temporal SDK, activity threads, Vert.x, thread pools. Normal: waiting has a stable baseline (~20–30) from idle pool workers; grows proportionally with Workflows In Progress in the Temporal Java SDK (each cached workflow holds at least one real JVM thread in WAITING state — by design). Problem: waiting grows faster than Workflows In Progress = activities holding extra threads for I/O; blocked > 0 sustained = monitor contention; waiting approaching 600 (default maxWorkflowThreadCount) = worker near thread limit.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 20,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "waiting"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timed-waiting"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "blocked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "runnable"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 234
+      },
+      "id": 113,
+      "interval": "5s",
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "JVM Thread States (stacked)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "expr": "jvm_threads_states_threads{state=\"waiting\"}",
+          "legendFormat": "waiting",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "expr": "jvm_threads_states_threads{state=\"timed-waiting\"}",
+          "legendFormat": "timed-waiting",
+          "refId": "B",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "expr": "jvm_threads_states_threads{state=\"blocked\"}",
+          "legendFormat": "blocked",
+          "refId": "C",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "expr": "jvm_threads_states_threads{state=\"runnable\"}",
+          "legendFormat": "runnable",
+          "refId": "D",
+          "range": true
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Right axis: standard JVM metric — total threads in waiting + timed-waiting states (all parked threads regardless of reason). Left axis: [Custom — replace with your blocking operation timer] avg duration of a specific application-level blocking call in ms. In this setup it is the fraud Kafka send. Normal: right axis tracks Workflows In Progress (Temporal sticky thread baseline); left axis low when the dependency is fast. Problem: left axis rising AND right axis rising faster than Workflows In Progress = the blocking call is contributing extra thread accumulation; right axis approaching 600 = worker near maxWorkflowThreadCount limit.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "waiting + timed-waiting threads"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Parked thread count"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 234
+      },
+      "id": 114,
+      "interval": "5s",
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "JVM Parked Threads (waiting + timed-waiting)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "expr": "rate(fraud_smallrye_send_duration_seconds_sum[$__rate_interval]) / rate(fraud_smallrye_send_duration_seconds_count[$__rate_interval]) * 1000",
+          "legendFormat": "sendAndAwait avg ms",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
+          "expr": "jvm_threads_states_threads{state=\"waiting\"} + jvm_threads_states_threads{state=\"timed-waiting\"}",
+          "legendFormat": "waiting + timed-waiting threads",
+          "refId": "B",
           "range": true
         }
       ]

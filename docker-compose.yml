@@ -62,6 +62,37 @@ services:
     stdin_open: true
     tty: true
 
+  redpanda:
+    image: redpandadata/redpanda:v24.3.7
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --mode dev-container
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"   # Kafka API — app on host connects here
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9644/v1/status/ready"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  fraud-simulator:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.fraud-simulator
+    container_name: fraud-simulator
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      - BOOTSTRAP_SERVERS=redpanda:9092
+      - REJECT_RATE=0.15
+    restart: on-failure
+
   wiremock:
     image: wiremock/wiremock:3.10.0
     container_name: wiremock

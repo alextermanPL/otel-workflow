@@ -1,0 +1,429 @@
+{
+  "description": "Redpanda broker-side metrics. Purpose: prove that slow produce ACKs at the broker level cause JVM activity thread exhaustion in the payment-workflow service.",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "panels": [],
+      "title": "Produce ACK Latency — Broker Side",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "description": "Broker-side produce request latency. This is the time Redpanda takes to process a produce request and send the ACK back. If this is elevated (>10ms under normal load), it directly explains why sendAndAwait blocks for a long time and exhausts the activity thread pool. Compare with 'sendAndAwait p95' in the Temporal SDK dashboard — they should track together.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 1 },
+      "id": 2,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max", "mean"],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Produce Request Latency — p50 / p95 / p99 (ms)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(redpanda_kafka_request_latency_seconds_bucket{request=\"produce\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "p50",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(redpanda_kafka_request_latency_seconds_bucket{redpanda_request=\"produce\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "p95",
+          "refId": "B",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(redpanda_kafka_request_latency_seconds_bucket{request=\"produce\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "p99",
+          "refId": "C",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "id": 3,
+      "panels": [],
+      "title": "Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "description": "Records produced per second at the broker. When the activity thread pool is exhausted, no new produce requests reach the broker — this rate collapses. The collapse in this panel should be correlated with 'act slots available → 0' in the Temporal SDK dashboard.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 },
+      "id": 4,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max", "mean"],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Records Produced / sec (broker)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(redpanda_kafka_records_produced_total[$__rate_interval]))",
+          "legendFormat": "produced/sec",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "description": "Bytes produced per second. Useful to correlate with record rate — if bytes/record ratio spikes, message size is growing; if both drop together, it's throughput starvation from thread exhaustion on the client side.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 11 },
+      "id": 5,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max", "mean"],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Bytes Produced / sec (broker)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(redpanda_kafka_request_bytes_total{redpanda_request=\"produce\"}[$__rate_interval]))",
+          "legendFormat": "bytes/sec",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "id": 6,
+      "panels": [],
+      "title": "Broker Resources — Rule Out Other Causes",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "description": "CPU busy ratio per shard (0–1). If CPU is near 100% on any shard when produce latency is high, the broker is CPU-bound — that's the cause. If CPU is low but latency is high, the cause is I/O or back-pressure from the produce request queue.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+      "id": 7,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Broker CPU Busy (per shard)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(redpanda_cpu_busy_seconds_total[$__rate_interval])",
+          "legendFormat": "shard {{shard}}",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "description": "Broker memory: allocated vs free. If allocated memory is near the limit, the broker may be GC-pausing (JVM) or rejecting allocations, which causes produce latency spikes.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+      "id": 8,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Broker Memory (allocated vs free)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "redpanda_memory_allocated_memory",
+          "legendFormat": "allocated",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        },
+        {
+          "expr": "redpanda_memory_free_memory",
+          "legendFormat": "free",
+          "refId": "B",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "description": "I/O queue depth per shard. High queue depth = storage I/O is the bottleneck for produce ACKs. In dev-container mode (acks=1, leader only), produce ACKs wait for the leader to write to its log — if I/O is backed up, latency spikes without CPU load.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+      "id": 9,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"],
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Broker I/O Queue Depth (per shard)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(redpanda_io_queue_total_read_ops[$__rate_interval]) + rate(redpanda_io_queue_total_write_ops[$__rate_interval])",
+          "legendFormat": "I/O ops/sec shard {{shard}}",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "id": 10,
+      "panels": [],
+      "title": "Correlation View — Broker Latency vs Worker Starvation",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "description": "Overlay of broker-side produce latency (left axis, ms) and Temporal activity slots available (right axis, count). The causal chain: produce latency rises → sendAndAwait blocks → activity slots drop to 0 → workflow throughput goes sequential. All three movements should be visible on this single panel.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "act slots available" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "unit", "value": "short" },
+              { "id": "custom.axisLabel", "value": "Slots" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } },
+              { "id": "custom.lineStyle", "value": { "fill": "dash" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "workflows completed/sec" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "unit", "value": "short" },
+              { "id": "custom.axisLabel", "value": "Slots / rate" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } },
+              { "id": "custom.lineStyle", "value": { "fill": "dash" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 29 },
+      "id": 11,
+      "interval": "5s",
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "title": "Causal Chain: Broker Produce Latency → Slots Exhausted → Sequential Execution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(redpanda_kafka_request_latency_seconds_bucket{redpanda_request=\"produce\"}[$__rate_interval]))) * 1000",
+          "legendFormat": "broker produce p95 ms",
+          "refId": "A",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        },
+        {
+          "expr": "rate(fraud_smallrye_send_duration_seconds_sum[$__rate_interval]) / rate(fraud_smallrye_send_duration_seconds_count[$__rate_interval]) * 1000",
+          "legendFormat": "fraud send avg ms (client)",
+          "refId": "B",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        },
+        {
+          "expr": "temporal_worker_task_slots_available{worker_type=\"ActivityWorker\"}",
+          "legendFormat": "act slots available",
+          "refId": "C",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        },
+        {
+          "expr": "sum(rate(temporal_workflow_completed_total[$__rate_interval]))",
+          "legendFormat": "workflows completed/sec",
+          "refId": "D",
+          "range": true,
+          "datasource": { "type": "prometheus", "uid": "$datasource" }
+        }
+      ]
+    }
+  ],
+  "preload": false,
+  "refresh": false,
+  "schemaVersion": 41,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": { "text": "prometheus", "value": "prometheus" },
+        "includeAll": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Kafka Cluster — Redpanda",
+  "uid": "kafka-cluster",
+  "version": 1
+}

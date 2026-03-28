@@ -1,5 +1,6 @@
 package com.plumery.workflow.testworkflow.workflow
 
+import com.plumery.workflow.testworkflow.model.FraudCheckResult
 import com.plumery.workflow.testworkflow.model.PaymentRequest
 import com.plumery.workflow.testworkflow.model.PaymentResult
 import com.plumery.workflow.testworkflow.model.ReservationResult
@@ -13,7 +14,11 @@ interface PaymentWorkflow {
     @WorkflowMethod
     fun processPayment(request: PaymentRequest): PaymentResult
 
-    /** External callback when the bank confirms (or rejects) the funds reservation. */
+    /** Bank callback — confirms or rejects the funds reservation. */
     @SignalMethod
     fun onReservationResult(result: ReservationResult)
+
+    /** Fraud service callback — CONTINUE to proceed or REJECT the payment. */
+    @SignalMethod
+    fun onFraudResult(result: FraudCheckResult)
 }

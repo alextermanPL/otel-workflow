@@ -1,13 +1,17 @@
 package com.plumery.workflow.testworkflow.workflow
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.plumery.workflow.testworkflow.client.PaymentApiClient
+import com.plumery.workflow.testworkflow.model.FraudCheckCommand
 import com.plumery.workflow.testworkflow.model.TransferResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkiverse.temporal.TemporalActivity
 import io.temporal.failure.ApplicationFailure
+import io.smallrye.reactive.messaging.MutinyEmitter
 import jakarta.inject.Inject
 import jakarta.ws.rs.WebApplicationException
+import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.rest.client.inject.RestClient
 
 private val logger = KotlinLogging.logger {}
@@ -16,6 +20,8 @@ private val logger = KotlinLogging.logger {}
 class PaymentActivitiesImpl @Inject constructor(
     @RestClient private val paymentApiClient: PaymentApiClient,
     private val meterRegistry: MeterRegistry,
+    private val objectMapper: ObjectMapper,
+    @Channel("fraud-check-commands") private val fraudCommandEmitter: MutinyEmitter<String>,
 ) : PaymentActivities {
 
     /**
@@ -26,6 +32,14 @@ class PaymentActivitiesImpl @Inject constructor(
         logger.info { "Sending reserve request for payment $paymentId" }
         val response = paymentApiClient.reserve(paymentId)
         logger.info { "Reserve request accepted for payment $paymentId — HTTP ${response.status}" }
+    }
+
+    override fun sendFraudCheck(command: FraudCheckCommand) {
+        logger.info { "Sending fraud check for payment ${command.paymentId}" }
+        val json = objectMapper.writeValueAsString(command)
+        meterRegistry.timer("fraud.smallrye.send.duration").recordCallable {
+            fraudCommandEmitter.sendAndAwait(json)
+        }
     }
 
     /**

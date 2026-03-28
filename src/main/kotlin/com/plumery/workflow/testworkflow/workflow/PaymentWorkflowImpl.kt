@@ -1,5 +1,7 @@
 package com.plumery.workflow.testworkflow.workflow
 
+import com.plumery.workflow.testworkflow.model.FraudCheckCommand
+import com.plumery.workflow.testworkflow.model.FraudCheckResult
 import com.plumery.workflow.testworkflow.model.PaymentRequest
 import com.plumery.workflow.testworkflow.model.PaymentResult
 import com.plumery.workflow.testworkflow.model.PaymentStatus
@@ -20,9 +22,14 @@ class PaymentWorkflowImpl : PaymentWorkflow {
     // ── Signal state ─────────────────────────────────────────────────────────
 
     private var reservationResult: ReservationResult? = null
+    private var fraudResult: FraudCheckResult? = null
 
     override fun onReservationResult(result: ReservationResult) {
         reservationResult = result
+    }
+
+    override fun onFraudResult(result: FraudCheckResult) {
+        fraudResult = result
     }
 
     // ── Workflow entry point ──────────────────────────────────────────────────
@@ -60,7 +67,7 @@ class PaymentWorkflowImpl : PaymentWorkflow {
         logger.info { "Reserving funds for payment ${request.paymentId}" }
         activities.reserveFunds(request.paymentId)
 
-        // Block until the bank signals back, or timer1 (2 min) expires
+        // Block until the bank signals back (capped by the 10-min overall timeout)
         val signalReceived = Workflow.await(Duration.ofMinutes(20)) { reservationResult != null }
 
         if (!signalReceived) {
@@ -76,7 +83,37 @@ class PaymentWorkflowImpl : PaymentWorkflow {
             return PaymentResult(request.paymentId, PaymentStatus.FAILED, reason)
         }
 
-        // ── Step 2: Transfer (sync, retried by Temporal on 5XX) ──────────────
+        // ── Step 2: Fraud check (command via Kafka, result via signal) ────────
+        logger.info { "Sending fraud check for payment ${request.paymentId}" }
+        activities.sendFraudCheck(
+            FraudCheckCommand(
+                workflowId = Workflow.getInfo().workflowId,
+                paymentId = request.paymentId,
+                amount = request.amount,
+                currency = request.currency,
+                debtorAccount = request.debtorAccount,
+                creditorAccount = request.creditorAccount,
+            )
+        )
+
+        val fraudResultReceived = Workflow.await(Duration.ofMinutes(5)) { fraudResult != null }
+
+        if (!fraudResultReceived) {
+            logger.warn { "Fraud check timed out for payment ${request.paymentId}" }
+            activities.publishRejected(request.paymentId, "Fraud check timeout")
+            return PaymentResult(request.paymentId, PaymentStatus.REJECTED, "Fraud check timeout")
+        }
+
+        if (fraudResult?.status == "REJECT") {
+            val reason = fraudResult?.reason ?: "Fraud detected"
+            logger.warn { "Fraud check rejected payment ${request.paymentId}: $reason" }
+            activities.publishRejected(request.paymentId, reason)
+            return PaymentResult(request.paymentId, PaymentStatus.REJECTED, reason)
+        }
+
+        logger.info { "Fraud check passed for payment ${request.paymentId}" }
+
+        // ── Step 3: Transfer (sync, retried by Temporal on 5XX) ──────────────
         logger.info { "Executing transfer for payment ${request.paymentId}" }
         val transferResponse = activities.transfer(request.paymentId)
 
@@ -86,7 +123,7 @@ class PaymentWorkflowImpl : PaymentWorkflow {
             return PaymentResult(request.paymentId, PaymentStatus.FAILED, "Transfer failed: ${transferResponse.status}")
         }
 
-        // ── Step 3: Publish payment completed ────────────────────────────────
+        // ── Step 4: Publish payment completed ────────────────────────────────
         logger.info { "Payment ${request.paymentId} completed successfully" }
         activities.publishCompleted(request.paymentId)
         return PaymentResult(request.paymentId, PaymentStatus.COMPLETED)

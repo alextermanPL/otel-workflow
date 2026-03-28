@@ -47,6 +47,7 @@ dependencies {
     implementation("io.quarkus:quarkus-info")
     implementation("io.quarkus:quarkus-config-yaml")
 
+    implementation("io.quarkus:quarkus-messaging-kafka")
     implementation("io.quarkus:quarkus-opentelemetry")
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.13")
     implementation("io.quarkiverse.temporal:quarkus-temporal:0.2.1")
